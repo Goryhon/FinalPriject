@@ -1,4 +1,5 @@
 import datetime
+import re
 
 from fastapi.responses import JSONResponse
 from Authorization.authorization import KeycloakJWTBearerHandler, HTTPException
@@ -29,8 +30,8 @@ def post_employees(employeer_info:employeer_model,role=Depends(KeycloakJWTBearer
         return JSONResponse(status_code=404, content={"message": "Пустое поле"})
     if employeer_info.age <18:
         return JSONResponse(status_code=404, content={"message": "Работник не достиг 18 лет"})
-    if len(employeer_info.phone_number) != 11:
-        return JSONResponse(status_code=404, content={"message": "Номер не соответствует формату"})
+    if not is_valid_custom_phone_number(employeer_info.phone_number):
+        return JSONResponse(status_code=404, content={"message": "Номер не соответствует формату 7**********"})
     cursor.execute(f'INSERT INTO employees (employees_id, employees_full_name, phone_number, age) VALUES ({employeer_info.employees_id},"{employeer_info.employees_full_name}","{employeer_info.phone_number}",{employeer_info.age})')
     conn.commit()
     conn.close()
@@ -70,8 +71,8 @@ def put_employee(employeer_info:employeer_model, role=Depends(KeycloakJWTBearerH
         return JSONResponse(status_code=404, content={"message": "Пустое поле"})
     if employeer_info.age < 18:
         return JSONResponse(status_code=404, content={"message": "Работник не достиг 18 лет"})
-    if len(employeer_info.phone_number) != 11:
-        return JSONResponse(status_code=404, content={"message": "Номер не соответствует формату"})
+    if not is_valid_custom_phone_number(employeer_info.phone_number):
+        return JSONResponse(status_code=404, content={"message": "Номер не соответствует формату 7**********"})
 
     # Обновление данных о работнике
     cursor.execute(f'''
@@ -427,6 +428,15 @@ def delete_bonuses_and_penalties(bonuses_info:bonuses_model,role=Depends(Keycloa
     conn.close()
     return {"message": f"Данные работника с ID {bonuses_info.employees_id} успешно удалены"}
 
+
+def is_valid_custom_phone_number(phone_number):
+    # Паттерн для номера телефона в формате 7**********
+    pattern = re.compile(r'^7\d{10}$')
+
+    # Проверка соответствия номера паттерну
+    match = pattern.match(phone_number)
+
+    return bool(match)
 
 def verify_admin(role) -> bool:
     if role == "admin":
